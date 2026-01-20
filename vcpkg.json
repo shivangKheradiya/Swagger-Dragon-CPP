@@ -1,0 +1,17 @@
+{
+  "name": "swagger-dragon",
+  "version": "0.1.0",
+  "dependencies": [
+    {
+      "name": "drogon",
+      "features": [
+        "ctl",
+        "orm",
+        "postgres",
+        "sqlite3",
+        "yaml"
+      ]
+    },
+    "jsoncpp"
+  ]
+}
