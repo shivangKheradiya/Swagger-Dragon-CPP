@@ -22,3 +22,5 @@ add_executable(Drogon_Demo src/main.cpp )
 target_link_libraries(Drogon_Demo PRIVATE 
     Drogon::Drogon
     Drogon_lib )
+
+add_subdirectory(myapp)
