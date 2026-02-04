@@ -118,3 +118,15 @@ curl -X PUT  http://127.0.0.1:5555/metadata/1 \
   -H "Content-Type: application/json" \
   -d '{"value":"Renamed Root"}'
 curl -X DELETE  http://127.0.0.1:5555/metadata/1
+
+curl -s -X POST http://127.0.0.1:5555/sql \
+  -H "Content-Type: application/json" \
+  -d '{"query":"SELECT * from users;"}'
+
+  curl -s -X POST http://127.0.0.1:5555/sql \
+  -H "Content-Type: application/json" \
+  -d '{"query":"SELECT * from tree_nodes;"}'
+
+  curl -s -X POST http://127.0.0.1:5555/sql \
+  -H "Content-Type: application/json" \
+  -d '{"query":"SELECT * from node_metadata;"}'
