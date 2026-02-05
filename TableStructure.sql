@@ -13,7 +13,7 @@ ALTER TABLE users OWNER TO myapp_user;
 ALTER SEQUENCE users_id_seq OWNER TO myapp_user;
 
 
-curl -X POST http://127.0.0.1:5555/users \
+curl -X POST http://127.0.0.1:5555/default/users \
      -H "Content-Type: application/json" \
      -d '{
            "username": "john_doe",
@@ -74,19 +74,19 @@ INSERT INTO node_metadata (node_id, key_name, value_text)
 VALUES (2, 'name', 'Child A');
 
 
-curl -X POST  http://127.0.0.1:5555/nodes \
+curl -X POST  http://127.0.0.1:5555/default/nodes \
   -H "Content-Type: application/json" \
   -d '{"parent_id": 1}'
 
-curl  http://127.0.0.1:5555/nodes/2
+curl  http://127.0.0.1:5555/default/nodes/2
 
-curl -X PUT  http://127.0.0.1:5555/nodes/2 \
+curl -X PUT  http://127.0.0.1:5555/default/nodes/2 \
   -H "Content-Type: application/json" \
   -d '{"parent_id": 5}'
 
-curl -X DELETE  http://127.0.0.1:5555/nodes/2
+curl -X DELETE  http://127.0.0.1:5555/default/nodes/2
 
-curl -X POST  http://127.0.0.1:5555/nodes/1/metadata \
+curl -X POST  http://127.0.0.1:5555/default/nodes/1/metadata \
   -H "Content-Type: application/json" \
   -d '{
     "key_name": "title",
@@ -97,36 +97,36 @@ curl -X POST  http://127.0.0.1:5555/nodes/1/metadata \
 -d '{"key_name":"priority","value":10}'
 -d '{"key_name":"config","value":{"x":1,"y":2}}'
 
-curl -X PUT  http://127.0.0.1:5555/metadata/3 \
+curl -X PUT  http://127.0.0.1:5555/default/metadata/3 \
   -H "Content-Type: application/json" \
   -d '{"value": "Updated Title"}'
-curl -X DELETE  http://127.0.0.1:5555/metadata/3
+curl -X DELETE  http://127.0.0.1:5555/default/metadata/3
 
 GRANT USAGE, SELECT, UPDATE ON SEQUENCE tree_nodes_node_id_seq TO system;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO system;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO system;
 
-curl -X POST  http://127.0.0.1:5555/nodes -H "Content-Type: application/json" -d '{}'
-curl -X POST  http://127.0.0.1:5555/nodes \
+curl -X POST  http://127.0.0.1:5555/default/nodes -H "Content-Type: application/json" -d '{}'
+curl -X POST  http://127.0.0.1:5555/default/nodes \
   -H "Content-Type: application/json" \
   -d '{"parent_id": 1}'
-curl -X POST  http://127.0.0.1:5555/nodes/1/metadata \
+curl -X POST  http://127.0.0.1:5555/default/nodes/1/metadata \
   -H "Content-Type: application/json" \
   -d '{"key_name":"name","value":"Root"}'
-curl  http://127.0.0.1:5555/nodes/1
-curl -X PUT  http://127.0.0.1:5555/metadata/1 \
+curl  http://127.0.0.1:5555/default/nodes/1
+curl -X PUT  http://127.0.0.1:5555/default/metadata/1 \
   -H "Content-Type: application/json" \
   -d '{"value":"Renamed Root"}'
-curl -X DELETE  http://127.0.0.1:5555/metadata/1
+curl -X DELETE  http://127.0.0.1:5555/default/metadata/1
 
-curl -s -X POST http://127.0.0.1:5555/sql \
+curl -s -X POST http://127.0.0.1:5555/default/sql \
   -H "Content-Type: application/json" \
   -d '{"query":"SELECT * from users;"}'
 
-  curl -s -X POST http://127.0.0.1:5555/sql \
+  curl -s -X POST http://127.0.0.1:5555/default/sql \
   -H "Content-Type: application/json" \
   -d '{"query":"SELECT * from tree_nodes;"}'
 
-  curl -s -X POST http://127.0.0.1:5555/sql \
+  curl -s -X POST http://127.0.0.1:5555/default/sql \
   -H "Content-Type: application/json" \
   -d '{"query":"SELECT * from node_metadata;"}'
