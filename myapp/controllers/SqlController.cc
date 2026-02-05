@@ -64,7 +64,8 @@ bool SqlController::isSelectLike(const std::string &query)
 }
 
 void SqlController::runSql(const HttpRequestPtr &req,
-                           std::function<void (const HttpResponsePtr &)> &&callback) const
+                           std::function<void (const HttpResponsePtr &)> &&callback, 
+                           std::string connectionId) const
 {
     auto json = req->getJsonObject();
     if (!json || !json->isMember("query"))
@@ -90,7 +91,7 @@ void SqlController::runSql(const HttpRequestPtr &req,
     // { "query": "SELECT * FROM users WHERE id=$1", "params": [123] }
     // See notes at the end of this file for a param-enabled variant.
 
-    auto dbClient = drogon::app().getDbClient();
+    auto dbClient = drogon::app().getDbClient(connectionId);
 
     // Execute asynchronously
     dbClient->execSqlAsync(

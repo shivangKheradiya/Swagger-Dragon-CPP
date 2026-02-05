@@ -15,44 +15,51 @@ class TreeController : public HttpController<TreeController>
 public:
     METHOD_LIST_BEGIN
         // Node CRUD
-        ADD_METHOD_TO(TreeController::createNode, "/nodes", Post);
-        ADD_METHOD_TO(TreeController::getNode, "/nodes/{1}", Get);
-        ADD_METHOD_TO(TreeController::updateNode, "/nodes/{1}", Put);
-        ADD_METHOD_TO(TreeController::deleteNode, "/nodes/{1}", Delete);
+        ADD_METHOD_TO(TreeController::createNode, "{1}/nodes", Post);
+        ADD_METHOD_TO(TreeController::getNode, "{1}/nodes/{2}", Get);
+        ADD_METHOD_TO(TreeController::updateNode, "{1}/nodes/{2}", Put);
+        ADD_METHOD_TO(TreeController::deleteNode, "{1}/nodes/{2}", Delete);
 
         // Metadata CRUD (single only, no bulk)
-        ADD_METHOD_TO(TreeController::addMetadata, "/nodes/{1}/metadata", Post);
-        ADD_METHOD_TO(TreeController::updateMetadata, "/metadata/{1}", Put);
-        ADD_METHOD_TO(TreeController::deleteMetadata, "/metadata/{1}", Delete);
+        ADD_METHOD_TO(TreeController::addMetadata, "{1}/nodes/{2}/metadata", Post);
+        ADD_METHOD_TO(TreeController::updateMetadata, "{1}/metadata/{2}", Put);
+        ADD_METHOD_TO(TreeController::deleteMetadata, "{1}/metadata/{2}", Delete);
     METHOD_LIST_END
 
     // Node CRUD
     void createNode(const HttpRequestPtr &req,
-                    std::function<void(const HttpResponsePtr &)> &&cb);
+                    std::function<void(const HttpResponsePtr &)> &&cb,
+                    std::string connectionId);
 
     void getNode(const HttpRequestPtr &req,
                  std::function<void(const HttpResponsePtr &)> &&cb,
+                 std::string connectionId,
                  int nodeId);
 
     void updateNode(const HttpRequestPtr &req,
                     std::function<void(const HttpResponsePtr &)> &&cb,
+                    std::string connectionId,
                     int nodeId);
 
     void deleteNode(const HttpRequestPtr &req,
                     std::function<void(const HttpResponsePtr &)> &&cb,
+                    std::string connectionId,
                     int nodeId);
 
     // Metadata CRUD
     void addMetadata(const HttpRequestPtr &req,
                      std::function<void(const HttpResponsePtr &)> &&cb,
+                     std::string connectionId,
                      int nodeId);
 
     void updateMetadata(const HttpRequestPtr &req,
                         std::function<void(const HttpResponsePtr &)> &&cb,
+                        std::string connectionId,
                         int metadataId);
 
     void deleteMetadata(const HttpRequestPtr &req,
                         std::function<void(const HttpResponsePtr &)> &&cb,
+                        std::string connectionId,
                         int metadataId);
 
 private:

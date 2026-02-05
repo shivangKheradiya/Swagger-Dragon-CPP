@@ -26,7 +26,8 @@ TreeController::detectValue(const Json::Value &v)
 
 // ---------------- NODE CRUD ----------------
 void TreeController::createNode(const HttpRequestPtr &req,
-                                std::function<void(const HttpResponsePtr &)> &&cb)
+                                std::function<void(const HttpResponsePtr &)> &&cb,
+                                std::string connectionId)
 {
     auto json = req->getJsonObject();
     TreeNodes n;
@@ -34,7 +35,7 @@ void TreeController::createNode(const HttpRequestPtr &req,
     if (json && (*json)["parent_id"].isInt())
         n.setParentId((*json)["parent_id"].asInt());
 
-    auto client = app().getDbClient("default");
+    auto client = app().getDbClient(connectionId);
     Mapper<TreeNodes> mp(client);
     mp.insert(n);
 
@@ -43,9 +44,10 @@ void TreeController::createNode(const HttpRequestPtr &req,
 
 void TreeController::getNode(const HttpRequestPtr &req,
                              std::function<void(const HttpResponsePtr &)> &&cb,
+                             std::string connectionId,
                              int nodeId)
 {
-    auto client = app().getDbClient("default");
+    auto client = app().getDbClient(connectionId);
     Mapper<TreeNodes> nm(client);
     Mapper<NodeMetadata> mm(client);
 
@@ -71,9 +73,10 @@ void TreeController::getNode(const HttpRequestPtr &req,
 
 void TreeController::updateNode(const HttpRequestPtr &req,
                                 std::function<void(const HttpResponsePtr &)> &&cb,
+                                std::string connectionId,
                                 int nodeId)
 {
-    auto client = app().getDbClient("default");
+    auto client = app().getDbClient(connectionId);
     Mapper<TreeNodes> nm(client);
     try {
         auto n = nm.findByPrimaryKey(nodeId);
@@ -94,9 +97,10 @@ void TreeController::updateNode(const HttpRequestPtr &req,
 
 void TreeController::deleteNode(const HttpRequestPtr &req,
                                 std::function<void(const HttpResponsePtr &)> &&cb,
+                                std::string connectionId,
                                 int nodeId)
 {
-    auto client = app().getDbClient("default");
+    auto client = app().getDbClient(connectionId);
     Mapper<TreeNodes> nm(client);
     try {
         nm.deleteByPrimaryKey(nodeId);
@@ -112,6 +116,7 @@ void TreeController::deleteNode(const HttpRequestPtr &req,
 // ---------------- METADATA CRUD ----------------
 void TreeController::addMetadata(const HttpRequestPtr &req,
                                  std::function<void(const HttpResponsePtr &)> &&cb,
+                                 std::string connectionId,
                                  int nodeId)
 {
     auto json = req->getJsonObject();
@@ -123,7 +128,7 @@ void TreeController::addMetadata(const HttpRequestPtr &req,
         return;
     }
 
-    auto client = app().getDbClient("default");
+    auto client = app().getDbClient(connectionId);
     Mapper<NodeMetadata> mm(client);
 
     NodeMetadata m;
@@ -139,9 +144,10 @@ void TreeController::addMetadata(const HttpRequestPtr &req,
 
 void TreeController::updateMetadata(const HttpRequestPtr &req,
                                     std::function<void(const HttpResponsePtr &)> &&cb,
+                                    std::string connectionId,
                                     int metadataId)
 {
-    auto client = app().getDbClient("default");
+    auto client = app().getDbClient(connectionId);
     Mapper<NodeMetadata> mm(client);
 
     try {
@@ -170,9 +176,10 @@ void TreeController::updateMetadata(const HttpRequestPtr &req,
 
 void TreeController::deleteMetadata(const HttpRequestPtr &req,
                                     std::function<void(const HttpResponsePtr &)> &&cb,
+                                    std::string connectionId,
                                     int metadataId)
 {
-    auto client = app().getDbClient("default");
+    auto client = app().getDbClient(connectionId);
     Mapper<NodeMetadata> mm(client);
 
     try {

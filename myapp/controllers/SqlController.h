@@ -8,14 +8,15 @@ class SqlController : public drogon::HttpController<SqlController>
   public:
     METHOD_LIST_BEGIN
     // POST /sql
-    ADD_METHOD_TO(SqlController::runSql, "/sql", drogon::Post);
+    ADD_METHOD_TO(SqlController::runSql, "{1}/sql", drogon::Post);
     // Optionally require auth filter:
     // ADD_METHOD_TO(SqlController::runSql, "/sql", drogon::Post, "AuthFilter");
     METHOD_LIST_END
 
     // Handler
     void runSql(const drogon::HttpRequestPtr &req,
-                std::function<void (const drogon::HttpResponsePtr &)> &&callback) const;
+                std::function<void (const drogon::HttpResponsePtr &)> &&callback, 
+                std::string connectionId) const;
 
   private:
     // Helper: convert Drogon SQL result set to JSON array
