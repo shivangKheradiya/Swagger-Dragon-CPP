@@ -8,8 +8,8 @@
 using namespace drogon;
 using drogon_model::myapp::Users;
 
-void UsersController::listUsers(const HttpRequestPtr&,    std::function<void(const HttpResponsePtr&)>&& cb) {
-    auto client = app().getDbClient("default");
+void UsersController::listUsers(const HttpRequestPtr&, std::function<void(const HttpResponsePtr&)>&& cb, std::string connectionId) {
+    auto client = app().getDbClient(connectionId);
     orm::Mapper<Users> mp(client);
     auto all = mp.findAll();
 
@@ -19,8 +19,8 @@ void UsersController::listUsers(const HttpRequestPtr&,    std::function<void(con
     cb(HttpResponse::newHttpJsonResponse(arr));
 }
 
-void UsersController::getUser(const HttpRequestPtr&,    std::function<void(const HttpResponsePtr&)>&& cb, int id) {
-    auto client = app().getDbClient("default");
+void UsersController::getUser(const HttpRequestPtr&,    std::function<void(const HttpResponsePtr&)>&& cb, std::string connectionId, int id) {
+    auto client = app().getDbClient(connectionId);
     orm::Mapper<Users> mp(client);
     try {
         auto u = mp.findByPrimaryKey(id);
@@ -35,7 +35,7 @@ void UsersController::getUser(const HttpRequestPtr&,    std::function<void(const
 
 void UsersController::createUser(
     const drogon::HttpRequestPtr& req,
-    std::function<void(const drogon::HttpResponsePtr&)>&& cb) {
+    std::function<void(const drogon::HttpResponsePtr&)>&& cb, std::string connectionId) {
 
     auto json = req->getJsonObject();
     if (!json) {
@@ -49,7 +49,7 @@ void UsersController::createUser(
     drogon_model::myapp::Users u(*json);
     u.setCreatedAt(trantor::Date::now());
 
-    auto client = drogon::app().getDbClient("default");
+    auto client = drogon::app().getDbClient(connectionId);
     drogon::orm::Mapper<drogon_model::myapp::Users> mp(client);
 
     // NOTE: When 'insert' returns void (e.g. MySQL/SQLite), this compiles fine.
