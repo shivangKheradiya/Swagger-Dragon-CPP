@@ -6,3 +6,5 @@ uvicorn main:app --reload
 sudo kill -9 12345
 
 http://127.0.0.1:8000/docs
+
+python -m uvicorn OPE_DBSQLite.api:app --reload --port 8000

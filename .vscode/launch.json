@@ -7,28 +7,6 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal"
-        },
-        {
-            "name": "Run FastAPI",
-            "type": "python",
-            "request": "launch",
-            "program": "uvicorn",
-            "args": [
-                "main:app",
-                "--reload"
-            ],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Run FastAPI OPE_DBSQLite",
-            "type": "python",
-            "request": "launch",
-            "program": "uvicorn",
-            "args": [
-                "OPE_DBSQLite.api:app",
-                "--reload"
-            ],
-            "console": "integratedTerminal"
         }
     ]
 }
