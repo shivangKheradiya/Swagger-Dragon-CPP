@@ -419,3 +419,4 @@ FodyWeavers.xsd
 
 OPE_DBSQLite.egg-info
 fastapi-env
+dbs
