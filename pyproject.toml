@@ -1,0 +1,20 @@
+[project]
+name = "OPE_DBSQLite"
+version = "0.1.0"
+description = "FastAPI + SQLite CRUD skeleton"
+authors = [{name = "Shivang Kheradiya"}]
+requires-python = ">=3.8"
+dependencies = [
+    "fastapi",
+    "uvicorn"
+]
+
+[project.urls]
+Homepage = "https://github.com/your/repo"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,6 +1,8 @@
 {
-    "python.defaultInterpreterPath": "${workspaceFolder}/.conda/bin/python",
+    "python.defaultInterpreterPath": "${workspaceFolder}/fastapi-env/bin/python",
     "python.terminal.activateEnvironment": true,
     "python.analysis.typeCheckingMode": "basic",
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "python-envs.defaultEnvManager": "ms-python.python:conda",
+    "python-envs.defaultPackageManager": "ms-python.python:conda"
 }

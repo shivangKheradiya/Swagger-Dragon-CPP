@@ -416,3 +416,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+OPE_DBSQLite.egg-info
+fastapi-env
