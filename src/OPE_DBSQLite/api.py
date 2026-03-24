@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Depends, HTTPException
 from .crud import (
     create_record,
     read_record,
@@ -6,6 +6,9 @@ from .crud import (
     update_record,
     delete_record
 )
+from .database import get_db
+
+app = FastAPI(title="OPE-DBSQLite (SQLAlchemy Version)")
 
 ALLOWED_TABLES = {
     "TreeNodes",
@@ -14,42 +17,40 @@ ALLOWED_TABLES = {
     "ElementTypeAttributes",
 }
 
-app = FastAPI(title="OPE-DBSQLite Multi-DB API")
-
 
 def validate_table(table: str):
     if table not in ALLOWED_TABLES:
-        raise HTTPException(status_code=400, detail=f"Invalid table '{table}'")
+        raise HTTPException(status_code=400, detail=f"Invalid table: {table}")
 
 
 @app.post("/{code}/{table}")
-def api_create(code: str, table: str, payload: dict):
+def api_create(code: str, table: str, payload: dict, db=Depends(get_db)):
     validate_table(table)
-    return create_record(code, table, payload)
+    return create_record(db, table, payload)
 
 
 @app.get("/{code}/{table}")
-def api_get_all(code: str, table: str):
+def api_read_all(code: str, table: str, db=Depends(get_db)):
     validate_table(table)
-    return read_all_records(code, table)
+    return read_all_records(db, table)
 
 
 @app.get("/{code}/{table}/{key}")
-def api_get_one(code: str, table: str, key: str):
+def api_read_one(code: str, table: str, key: str, db=Depends(get_db)):
     validate_table(table)
-    row = read_record(code, table, key)
-    if not row:
-        raise HTTPException(status_code=404, detail="Not found")
-    return row
+    record = read_record(db, table, key)
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return record
 
 
 @app.put("/{code}/{table}/{key}")
-def api_update(code: str, table: str, key: str, payload: dict):
+def api_update(code: str, table: str, key: str, payload: dict, db=Depends(get_db)):
     validate_table(table)
-    return update_record(code, table, key, payload)
+    return update_record(db, table, key, payload)
 
 
 @app.delete("/{code}/{table}/{key}")
-def api_delete(code: str, table: str, key: str):
+def api_delete(code: str, table: str, key: str, db=Depends(get_db)):
     validate_table(table)
-    return delete_record(code, table, key)
+    return delete_record(db, table, key)

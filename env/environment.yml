@@ -13,3 +13,4 @@ dependencies:
       - watchfiles
       - pydantic
       - httpx
+      - sqlalchemy

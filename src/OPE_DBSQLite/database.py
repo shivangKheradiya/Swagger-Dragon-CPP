@@ -1,67 +1,41 @@
-import sqlite3
 import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-BASE_DIR = os.path.abspath("dbs")  # All DB files stored here
+BASE_DIR = os.path.abspath("dbs")
 os.makedirs(BASE_DIR, exist_ok=True)
 
-REQUIRED_TABLES = {
-    "TreeNodes": """
-        CREATE TABLE IF NOT EXISTS TreeNodes (
-            UUID TEXT PRIMARY KEY,
-            Parent TEXT DEFAULT NULL,
-            IsDeleted BOOLEAN DEFAULT 0
-        );
-    """,
+ENGINES = {}
+SESSIONS = {}
 
-    "TreeNodeAttributes": """
-        CREATE TABLE IF NOT EXISTS TreeNodeAttributes (
-            UUID TEXT PRIMARY KEY,
-            TreeNodeUUID TEXT,
-            ElementTypeAttributeID INTEGER,
-            Value TEXT DEFAULT NULL,
-            ChangedFrom TEXT DEFAULT NULL,
-            IsDeleted BOOLEAN DEFAULT 0
-        );
-    """,
+Base = declarative_base()
 
-    "ElementTypes": """
-        CREATE TABLE IF NOT EXISTS ElementTypes (
-            IDNo INTEGER PRIMARY KEY AUTOINCREMENT,
-            Name TEXT DEFAULT NULL
-        );
-    """,
+def get_engine(code: str):
+    """Return (cached) SQLAlchemy engine for given 3-letter code."""
+    code = code.upper()
+    db_path = os.path.join(BASE_DIR, f"{code}.db")
+    db_url = f"sqlite:///{db_path}"
 
-    "ElementTypeAttributes": """
-        CREATE TABLE IF NOT EXISTS ElementTypeAttributes (
-            IDNo INTEGER PRIMARY KEY AUTOINCREMENT,
-            ElementTypeID INTEGER,
-            Name TEXT,
-            DataType TEXT,
-            DefaultValue TEXT
-        );
-    """
-}
+    if code not in ENGINES:
+        engine = create_engine(
+            db_url,
+            connect_args={"check_same_thread": False},
+            future=True
+        )
+        ENGINES[code] = engine
+        SESSIONS[code] = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+        # Create required tables on new DB
+        Base.metadata.create_all(bind=engine)
+
+    return ENGINES[code], SESSIONS[code]
 
 
 def get_db(code: str):
-    """Return DB connection based on 3-letter prefix."""
-    if len(code) != 3:
-        raise ValueError("DB code must be exactly 3 letters, e.g., 'ABC'")
-
-    db_path = os.path.join(BASE_DIR, f"{code.upper()}.db")
-    first_time = not os.path.exists(db_path)
-
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-
-    if first_time:
-        create_required_tables(conn)
-
-    return conn
-
-
-def create_required_tables(conn):
-    cursor = conn.cursor()
-    for sql in REQUIRED_TABLES.values():
-        cursor.execute(sql)
-    conn.commit()
+    """Session generator for FastAPI dependencies."""
+    _, SessionLocal = get_engine(code)
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

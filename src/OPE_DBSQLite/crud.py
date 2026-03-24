@@ -1,7 +1,20 @@
-from typing import Dict, Any
-from .database import get_db
+from sqlalchemy.orm import Session
+from fastapi import HTTPException
+from .models import (
+    TreeNodes,
+    TreeNodeAttributes,
+    ElementTypes,
+    ElementTypeAttributes
+)
 
-PRIMARY_KEY_COL = {
+TABLE_MAP = {
+    "TreeNodes": TreeNodes,
+    "TreeNodeAttributes": TreeNodeAttributes,
+    "ElementTypes": ElementTypes,
+    "ElementTypeAttributes": ElementTypeAttributes,
+}
+
+PRIMARY_KEYS = {
     "TreeNodes": "UUID",
     "TreeNodeAttributes": "UUID",
     "ElementTypes": "IDNo",
@@ -9,76 +22,51 @@ PRIMARY_KEY_COL = {
 }
 
 
-def create_record(code: str, table: str, data: Dict[str, Any]):
-    conn = get_db(code)
-    cursor = conn.cursor()
-
-    cols = ", ".join(data.keys())
-    placeholders = ", ".join("?" for _ in data)
-    values = list(data.values())
-
-    cursor.execute(
-        f"INSERT INTO {table} ({cols}) VALUES ({placeholders})",
-        values
-    )
-    conn.commit()
-    conn.close()
-    return {"status": "created"}
+def create_record(db: Session, table: str, data: dict):
+    Model = TABLE_MAP[table]
+    record = Model(**data)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
 
 
-def read_all_records(code: str, table: str):
-    conn = get_db(code)
-    cursor = conn.cursor()
-
-    cursor.execute(f"SELECT * FROM {table}")
-    rows = cursor.fetchall()
-
-    conn.close()
-    return [dict(row) for row in rows]
+def read_all_records(db: Session, table: str):
+    Model = TABLE_MAP[table]
+    return db.query(Model).all()
 
 
-def read_record(code: str, table: str, key: str):
-    conn = get_db(code)
-    cursor = conn.cursor()
-
-    key_col = PRIMARY_KEY_COL[table]
-
-    cursor.execute(
-        f"SELECT * FROM {table} WHERE {key_col} = ?",
-        (key,)
-    )
-    row = cursor.fetchone()
-
-    conn.close()
-    return dict(row) if row else None
+def read_record(db: Session, table: str, key: str):
+    Model = TABLE_MAP[table]
+    pk = PRIMARY_KEYS[table]
+    record = db.query(Model).filter(getattr(Model, pk) == key).first()
+    return record
 
 
-def update_record(code: str, table: str, key: str, data: Dict[str, Any]):
-    conn = get_db(code)
-    cursor = conn.cursor()
+def update_record(db: Session, table: str, key: str, data: dict):
+    Model = TABLE_MAP[table]
+    pk = PRIMARY_KEYS[table]
 
-    key_col = PRIMARY_KEY_COL[table]
-    sets = ", ".join(f"{k}=?" for k in data)
-    values = list(data.values()) + [key]
+    record = db.query(Model).filter(getattr(Model, pk) == key).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
 
-    cursor.execute(
-        f"UPDATE {table} SET {sets} WHERE {key_col} = ?",
-        values
-    )
+    for k, v in data.items():
+        setattr(record, k, v)
 
-    conn.commit()
-    conn.close()
-    return {"status": "updated"}
+    db.commit()
+    db.refresh(record)
+    return record
 
 
-def delete_record(code: str, table: str, key: str):
-    conn = get_db(code)
-    cursor = conn.cursor()
+def delete_record(db: Session, table: str, key: str):
+    Model = TABLE_MAP[table]
+    pk = PRIMARY_KEYS[table]
 
-    key_col = PRIMARY_KEY_COL[table]
+    record = db.query(Model).filter(getattr(Model, pk) == key).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
 
-    cursor.execute(f"DELETE FROM {table} WHERE {key_col} = ?", (key,))
-    conn.commit()
-    conn.close()
-
+    db.delete(record)
+    db.commit()
     return {"status": "deleted"}
