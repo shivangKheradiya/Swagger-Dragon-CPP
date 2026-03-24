@@ -4,7 +4,8 @@ from .crud import (
     read_record,
     read_all_records,
     update_record,
-    delete_record
+    delete_record,
+    run_bulk_operations
 )
 from .database import get_db
 
@@ -16,6 +17,18 @@ ALLOWED_TABLES = {
     "ElementTypes",
     "ElementTypeAttributes",
 }
+
+
+@app.post("/{code}/bulk")
+def api_bulk(code: str, payload: dict, db=Depends(get_db)):
+    # Validate tables
+    for section in ["insert", "update", "delete"]:
+        if section in payload:
+            for table in payload[section].keys():
+                if table not in ALLOWED_TABLES:
+                    raise HTTPException(status_code=400, detail=f"Invalid table: {table}")
+
+    return run_bulk_operations(db, payload)
 
 
 def validate_table(table: str):

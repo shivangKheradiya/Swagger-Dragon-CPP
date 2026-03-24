@@ -158,6 +158,40 @@ def test_read_treenode_attributes():
     assert isinstance(res.json(), list)
 
 
+def test_bulk_insert_update_delete():
+    payload = {
+        "insert": {
+            "TreeNodes": [
+                {"UUID": "N1", "Parent": None, "IsDeleted": False},
+                {"UUID": "N2", "Parent": "N1", "IsDeleted": False}
+            ],
+            "ElementTypes": [
+                {"Name": "Pipe"},
+                {"Name": "Equipment"}
+            ]
+        },
+        "update": {
+            "TreeNodes": [
+                {"UUID": "N1", "IsDeleted": True}
+            ]
+        },
+        "delete": {
+            "TreeNodeAttributes": [
+                {"UUID": "ATTR1"}
+            ]
+        }
+    }
+    
+    res = client.post(f"/{TEST_DB_CODE}/bulk", json=payload)
+    assert res.status_code == 200
+    assert res.json()["status"] == "success"
+
+    # Validate update
+    node = client.get(f"/{TEST_DB_CODE}/TreeNodes/N1").json()
+    assert node["IsDeleted"] in (1, True)
+
+
+test_bulk_insert_update_delete()
 test_api_starts()
 test_database_file_created()
 test_required_tables_exist()
