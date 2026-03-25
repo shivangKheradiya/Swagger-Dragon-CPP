@@ -1,0 +1,26 @@
+# Which backend each 3-letter code should use
+[database_map]
+ABC = "sqlite"
+XYZ = "postgres_xyz"
+QWE = "sqlite"
+MNO = "postgres_mno"
+TST = "sqlite"
+
+# SQLite base settings
+[sqlite]
+base_dir = "dbs"
+
+# PostgreSQL groups
+[postgres_xyz]
+user = "postgres"
+password = "pass123"
+host = "localhost"
+port = 5432
+database = "xyz"
+
+[postgres_mno]
+user = "postgres"
+password = "report123"
+host = "localhost"
+port = 5432
+database = "mno"
