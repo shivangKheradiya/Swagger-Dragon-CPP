@@ -87,6 +87,9 @@ def run_bulk_operations(db: Session, payload: dict):
                     Model = TABLE_MAP[table]
                     objects = [Model(**row) for row in rows]
                     db.add_all(objects)
+                    db.flush()
+                    for obj in objects:
+                        db.refresh(obj)
 
             # --------------------
             # UPDATE
@@ -106,6 +109,8 @@ def run_bulk_operations(db: Session, payload: dict):
                             )
                         for k, v in row.items():
                             setattr(record, k, v)
+                            db.flush()
+                            db.refresh(record)
 
             # --------------------
             # DELETE
@@ -120,6 +125,7 @@ def run_bulk_operations(db: Session, payload: dict):
                         record = db.query(Model).filter(getattr(Model, pk) == key).first()
                         if record:
                             db.delete(record)
+                            db.flush()
 
         # Commit happens automatically in with-block
         return {"status": "success"}
