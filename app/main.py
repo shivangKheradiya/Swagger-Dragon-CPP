@@ -1,12 +1,24 @@
 from fastapi import FastAPI
-from app.routers.attributes_design import router as attributes_router
-from app.routers.history_design import router as history_router
-from app.db import engine
-from app.models.base import Base
+from app.api.jsonb_api import router as jsonb_router
 
-app = FastAPI(title="Attribute-Driven Tree API")
+def create_app() -> FastAPI:
+    """
+    Application bootstrap.
 
-Base.metadata.create_all(bind=engine)
+    IMPORTANT:
+    - No global engine
+    - No Base.metadata.create_all()
+    - DB setup happens inside get_engine(code)
+    """
+    app = FastAPI(
+        title="Dynamic JSONB CRUD API",
+        version="1.0.0",
+    )
 
-app.include_router(attributes_router)
-app.include_router(history_router)
+    # Register JSONB dynamic API
+    app.include_router(jsonb_router)
+
+    return app
+
+
+app = create_app()

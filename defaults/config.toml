@@ -13,7 +13,7 @@ base_dir = "dbs"
 # PostgreSQL groups
 [postgres_xyz]
 user = "postgres"
-password = "pass123"
+password = "postgres"
 host = "localhost"
 port = 5432
 database = "xyz"
