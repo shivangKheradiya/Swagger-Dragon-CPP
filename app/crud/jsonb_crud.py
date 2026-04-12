@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from ..registry import get_desi_model
+from app.registry import LIVE_TABLE_REGISTRY, HISTORY_TABLE_REGISTRY
 
 
 # ---------------------------------------------------------
@@ -16,13 +16,24 @@ def create_record(
     Create a new record in a JSONB dynamic table.
     """
     try:
-        Model = get_desi_model(table_name)
+        LiveModel = LIVE_TABLE_REGISTRY[table_name]
+        HistoryModel = HISTORY_TABLE_REGISTRY[table_name]
     except KeyError:
         raise HTTPException(status_code=400, detail="Invalid table name")
 
-    obj = Model(**data)
-
+    obj = LiveModel(**data)
     db.add(obj)
+    db.flush()  # get obj.uuid
+    
+    if HistoryModel:
+        history = HistoryModel(
+            TNAUUID=obj.uuid,
+            OperationType=1,  # CREATE
+            OldValue=None,
+            NewValue=obj.value,
+        )
+        db.add(history)
+
     db.commit()
     db.refresh(obj)
 
@@ -40,11 +51,12 @@ def read_all_records(
     Read all records from a JSONB dynamic table.
     """
     try:
-        Model = get_desi_model(table_name)
+        LiveModel = LIVE_TABLE_REGISTRY[table_name]
+        HistoryModel = HISTORY_TABLE_REGISTRY[table_name]
     except KeyError:
         raise HTTPException(status_code=400, detail="Invalid table name")
 
-    return db.query(Model).all()
+    return db.query(LiveModel).all()
 
 
 # ---------------------------------------------------------
@@ -59,11 +71,11 @@ def read_record_by_uuid(
     Read a single record by UUID.
     """
     try:
-        Model = get_desi_model(table_name)
+        LiveModel = LIVE_TABLE_REGISTRY[table_name]
     except KeyError:
         raise HTTPException(status_code=400, detail="Invalid table name")
 
-    obj = db.query(Model).filter(Model.uuid == uuid).first()
+    obj = db.query(LiveModel).filter(LiveModel.uuid == uuid).first()
 
     if not obj:
         raise HTTPException(status_code=404, detail="Record not found")
@@ -84,17 +96,29 @@ def update_record(
     Update an existing record by UUID.
     """
     try:
-        Model = get_desi_model(table_name)
+        LiveModel = LIVE_TABLE_REGISTRY[table_name]
+        HistoryModel = HISTORY_TABLE_REGISTRY[table_name]
     except KeyError:
         raise HTTPException(status_code=400, detail="Invalid table name")
 
-    obj = db.query(Model).filter(Model.uuid == uuid).first()
+    obj = db.query(LiveModel).filter(LiveModel.uuid == uuid).first()
 
     if not obj:
         raise HTTPException(status_code=404, detail="Record not found")
 
+    old_value = obj.value
+
     for key, value in data.items():
         setattr(obj, key, value)
+
+    if HistoryModel:
+        history = HistoryModel(
+            TNAUUID=obj.uuid,
+            OperationType=2,  # UPDATE
+            OldValue=old_value,
+            NewValue=obj.value,
+        )
+        db.add(history)
 
     db.commit()
     db.refresh(obj)
@@ -114,14 +138,24 @@ def delete_record(
     Delete a record by UUID.
     """
     try:
-        Model = get_desi_model(table_name)
+        LiveModel = LIVE_TABLE_REGISTRY[table_name]
+        HistoryModel = HISTORY_TABLE_REGISTRY[table_name]
     except KeyError:
         raise HTTPException(status_code=400, detail="Invalid table name")
 
-    obj = db.query(Model).filter(Model.uuid == uuid).first()
+    obj = db.query(LiveModel).filter(LiveModel.uuid == uuid).first()
 
     if not obj:
         raise HTTPException(status_code=404, detail="Record not found")
+
+    if HistoryModel:
+        history = HistoryModel(
+            TNAUUID=obj.uuid,
+            OperationType=3,  # DELETE
+            OldValue=obj.value,
+            NewValue=None,
+        )
+        db.add(history)
 
     db.delete(obj)
     db.commit()

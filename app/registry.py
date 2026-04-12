@@ -6,12 +6,24 @@ This file acts as a security and routing layer:
 - Prevents arbitrary table access or SQL injection
 """
 
-from .models.desi_tables import (
+from .models.tables import (
     TreeDESI,
-    AssetDESI,
-    NodeDESI,
+    TreeCATA,
+    TreeDICT,
+    TreeCLIM,
+    TreeENGG,
+    TreeSCHE,
+    TreeSKET
 )
 
+from app.models.tables_history import (
+    TreeHistoryDESI,
+    TreeHistoryCATA,
+    TreeHistoryDICT,
+    TreeHistoryENGG,
+    TreeHistorySCHE,
+    TreeHistorySKET,
+)
 
 # ------------------------------------------------------------------
 # JSONB dynamic table registry
@@ -20,17 +32,21 @@ from .models.desi_tables import (
 # Value -> SQLAlchemy model class
 # ------------------------------------------------------------------
 
-DESI_TABLE_REGISTRY = {
-    "tree_desi": TreeDESI,
-    "asset_desi": AssetDESI,
-    "node_desi": NodeDESI,
+LIVE_TABLE_REGISTRY = {
+    "DESI": TreeDESI,
+    "CATA": TreeCATA,
+    "DICT": TreeDICT,
+    "ENGG": TreeENGG,
+    "SCHE": TreeSCHE,
+    "SKET": TreeSKET,
+    "CLIM": TreeCLIM,
 }
 
-
-def get_desi_model(table_name: str):
-    """
-    Resolve table name to SQLAlchemy model.
-
-    Raises KeyError if table is not registered.
-    """
-    return DESI_TABLE_REGISTRY[table_name]
+HISTORY_TABLE_REGISTRY = {
+    "DESI": TreeHistoryDESI,
+    "CATA": TreeHistoryCATA,
+    "DICT": TreeHistoryDICT,
+    "ENGG": TreeHistoryENGG,
+    "SCHE": TreeHistorySCHE,
+    "SKET": TreeHistorySKET,
+}

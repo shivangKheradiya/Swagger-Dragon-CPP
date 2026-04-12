@@ -11,17 +11,17 @@ from ..crud.jsonb_crud import (
     update_record,
     delete_record,
 )
-from ..registry import DESI_TABLE_REGISTRY
+from ..registry import LIVE_TABLE_REGISTRY
 
 
-router = APIRouter(prefix="/{code}/jsonb", tags=["JSONB Dynamic Tables"])
+router = APIRouter(prefix="/{code}", tags=["JSONB Dynamic Tables"])
 
 
 # ---------------------------------------------------------
 # Helper: validate table name early
 # ---------------------------------------------------------
 def validate_table(table: str):
-    if table not in DESI_TABLE_REGISTRY:
+    if table not in LIVE_TABLE_REGISTRY:
         raise HTTPException(status_code=400, detail=f"Invalid table name: {table}")
 
 
