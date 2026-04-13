@@ -4,15 +4,19 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..schemas.jsonb_value import JSONBCreate
-from ..crud.jsonb_crud import (
-    create_record,
-    read_all_records,
-    read_record_by_uuid,
-    update_record,
-    delete_record,
-)
 from ..registry import LIVE_TABLE_REGISTRY
 
+# ✅ NEW: session-overlay CRUD (to be implemented next)
+from ..crud.session_overlay_crud import (
+    push_create,
+    push_update,
+    push_delete,
+)
+
+from ..crud.session_read_crud import (
+    read_all_with_overlay,
+    read_one_with_overlay,
+)
 
 router = APIRouter(prefix="/{code}", tags=["JSONB Dynamic Tables"])
 
@@ -26,9 +30,9 @@ def validate_table(table: str):
 
 
 # ---------------------------------------------------------
-# CREATE
+# CREATE → SESSION OVERLAY
 # ---------------------------------------------------------
-@router.post("/{table}", summary="Create a JSONB record")
+@router.post("/{table}", summary="Create a JSONB record (session overlay)")
 def create_jsonb_record(
     code: str,
     table: str,
@@ -43,11 +47,11 @@ def create_jsonb_record(
         context={"table": table},
     )
 
-    return create_record(db, table, payload.model_dump())
+    return push_create(db, table, payload)
 
 
 # ---------------------------------------------------------
-# READ ALL
+# READ ALL (LIVE ONLY FOR NOW)
 # ---------------------------------------------------------
 @router.get("/{table}", summary="Read all records from a JSONB table")
 def read_all_jsonb_records(
@@ -56,11 +60,12 @@ def read_all_jsonb_records(
     db: Session = Depends(get_db),
 ):
     validate_table(table)
-    return read_all_records(db, table)
+    LiveModel = LIVE_TABLE_REGISTRY[table]
+    return db.query(LiveModel).all()
 
 
 # ---------------------------------------------------------
-# READ ONE
+# READ ONE (LIVE ONLY FOR NOW)
 # ---------------------------------------------------------
 @router.get("/{table}/{uuid}", summary="Read one JSONB record by UUID")
 def read_jsonb_record(
@@ -70,13 +75,19 @@ def read_jsonb_record(
     db: Session = Depends(get_db),
 ):
     validate_table(table)
-    return read_record_by_uuid(db, table, uuid)
+    LiveModel = LIVE_TABLE_REGISTRY[table]
+
+    obj = db.query(LiveModel).filter(LiveModel.uuid == uuid).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+    return obj
 
 
 # ---------------------------------------------------------
-# UPDATE
+# UPDATE → SESSION OVERLAY
 # ---------------------------------------------------------
-@router.put("/{table}/{uuid}", summary="Update a JSONB record")
+@router.put("/{table}/{uuid}", summary="Update a JSONB record (session overlay)")
 def update_jsonb_record(
     code: str,
     table: str,
@@ -91,18 +102,65 @@ def update_jsonb_record(
         context={"table": table},
     )
 
-    return update_record(db, table, uuid, payload.model_dump())
+    return push_update(db, table, uuid, payload)
 
 
 # ---------------------------------------------------------
-# DELETE
+# DELETE → SESSION OVERLAY
 # ---------------------------------------------------------
-@router.delete("/{table}/{uuid}", summary="Delete a JSONB record")
+@router.delete("/{table}/{uuid}", summary="Delete a JSONB record (session overlay)")
 def delete_jsonb_record(
     code: str,
     table: str,
     uuid: UUID,
+    session_uuid: UUID,
     db: Session = Depends(get_db),
 ):
     validate_table(table)
-    return delete_record(db, table, uuid)
+    return push_delete(db, table, uuid, session_uuid)
+
+
+# ---------------------------------------------------------
+# READ ALL (SESSION VIEW)
+# ---------------------------------------------------------
+@router.get(
+    "/{table}/session/{session_uuid}",
+    summary="Read all records with session overlay",
+)
+def read_all_with_session(
+    code: str,
+    table: str,
+    session_uuid: UUID,
+    db: Session = Depends(get_db),
+):
+    validate_table(table)
+    return read_all_with_overlay(db, table, session_uuid)
+
+
+# ---------------------------------------------------------
+# READ ONE (SESSION VIEW)
+# ---------------------------------------------------------
+@router.get(
+    "/{table}/{uuid}/session/{session_uuid}",
+    summary="Read one record with session overlay",
+)
+def read_one_with_session(
+    code: str,
+    table: str,
+    uuid: UUID,
+    session_uuid: UUID,
+    db: Session = Depends(get_db),
+):
+    validate_table(table)
+
+    result = read_one_with_overlay(
+        db=db,
+        table_name=table,
+        uuid=uuid,
+        session_uuid=session_uuid,
+    )
+
+    if result is None:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+    return result

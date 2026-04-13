@@ -6,7 +6,6 @@ from .tables import (
     TreeENGG,
     TreeSCHE,
     TreeSKET,
-    TreeCLIM,
 )
 
 # History tables
@@ -17,4 +16,14 @@ from .tables_history import (
     TreeHistoryENGG,
     TreeHistorySCHE,
     TreeHistorySKET,
+)
+
+# Session overlay tables
+from .session_overlay_tables import (
+    SessionTreeDESI,
+    SessionTreeCATA,
+    SessionTreeDICT,
+    SessionTreeENGG,
+    SessionTreeSCHE,
+    SessionTreeSKET,
 )

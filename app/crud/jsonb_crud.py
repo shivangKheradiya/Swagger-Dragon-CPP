@@ -1,6 +1,5 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-
 from app.registry import LIVE_TABLE_REGISTRY, HISTORY_TABLE_REGISTRY
 
 

@@ -10,7 +10,6 @@ from .models.tables import (
     TreeDESI,
     TreeCATA,
     TreeDICT,
-    TreeCLIM,
     TreeENGG,
     TreeSCHE,
     TreeSKET
@@ -23,6 +22,15 @@ from app.models.tables_history import (
     TreeHistoryENGG,
     TreeHistorySCHE,
     TreeHistorySKET,
+)
+
+from app.models.session_overlay_tables import (
+    SessionTreeDESI,
+    SessionTreeCATA,
+    SessionTreeDICT,
+    SessionTreeENGG,
+    SessionTreeSCHE,
+    SessionTreeSKET,
 )
 
 # ------------------------------------------------------------------
@@ -39,7 +47,6 @@ LIVE_TABLE_REGISTRY = {
     "ENGG": TreeENGG,
     "SCHE": TreeSCHE,
     "SKET": TreeSKET,
-    "CLIM": TreeCLIM,
 }
 
 HISTORY_TABLE_REGISTRY = {
@@ -49,4 +56,17 @@ HISTORY_TABLE_REGISTRY = {
     "ENGG": TreeHistoryENGG,
     "SCHE": TreeHistorySCHE,
     "SKET": TreeHistorySKET,
+}
+
+# ------------------------------------------------------------------
+# SESSION OVERLAY TABLE REGISTRY
+# ------------------------------------------------------------------
+
+SESSION_OVERLAY_REGISTRY = {
+    "DESI": SessionTreeDESI,
+    "CATA": SessionTreeCATA,
+    "DICT": SessionTreeDICT,
+    "ENGG": SessionTreeENGG,
+    "SCHE": SessionTreeSCHE,
+    "SKET": SessionTreeSKET,
 }

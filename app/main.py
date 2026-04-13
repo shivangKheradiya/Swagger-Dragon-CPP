@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.api.jsonb_api import router as jsonb_router
+from app.api.session_api import router as session_router
 
 def create_app() -> FastAPI:
     """
@@ -17,6 +18,7 @@ def create_app() -> FastAPI:
 
     # Register JSONB dynamic API
     app.include_router(jsonb_router)
+    app.include_router(session_router)
 
     return app
 

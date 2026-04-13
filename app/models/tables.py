@@ -38,9 +38,3 @@ class TreeSKET(JSONBBase):
     Dynamic JSONB table for generic node-related data.
     """
     __tablename__ = "treesket"
-
-class TreeCLIM(JSONBBase):
-    """
-    Dynamic JSONB table for generic node-related data.
-    """
-    __tablename__ = "treeclim"
