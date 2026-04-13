@@ -276,13 +276,17 @@ This architecture matches **professional CAD / PLM / versioned configuration sys
 
 ***
 
-✅ **End of README cURL section**
+set PGHOME=E:\Downloads\postgresql-18.3-2-windows-x64-binaries\pgsql
+set PATH=%PGHOME%\bin;%PATH%
+initdb -D %PGHOME%\data
+pg_ctl -D %PGHOME%\data -l %PGHOME%\data\pgsql.log start
+psql -U Shivang -d postgres
 
-If you want next, I can:
+:: pg_ctl -D %PGHOME%\data stop
+:: pg_ctl register -N PostgreSQL18 -D C:\pgsql\data
+:: net start PostgreSQL18
+:: net stop PostgreSQL18
 
-*   add a **one‑page architecture diagram (ASCII or Mermaid)**
-*   add **error case cURLs**
-*   add **CI smoke test with curl**
-*   add **Postman collection export**
-
-Just tell me.
+Changed the password
+:: ALTER ROLE postgres WITH PASSWORD 'postgres';
+:: ALTER ROLE "Shivang" WITH PASSWORD 'Shivang';
