@@ -1,89 +1,60 @@
 from uuid import UUID
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.registry import LIVE_TABLE_REGISTRY, SESSION_OVERLAY_REGISTRY
-from app.core.enums import OperationType
+from app.registry import SESSION_OVERLAY_REGISTRY
 
 
-def read_all_with_overlay(
+# ---------------------------------------------------------
+# READ ALL STAGED CHANGES FOR A SESSION
+# ---------------------------------------------------------
+def read_session_overlay(
     db: Session,
-    table_name: str,
+    table_code: str,
     session_uuid: UUID,
 ):
     """
-    Read all records merged with session overlay.
-    Overlay rows override live state.
+    Return all staged changes for a session (overlay only).
     """
+    try:
+        OverlayModel = SESSION_OVERLAY_REGISTRY[table_code]
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Invalid table code")
 
-    LiveModel = LIVE_TABLE_REGISTRY[table_name]
-    OverlayModel = SESSION_OVERLAY_REGISTRY[table_name]
-
-    # Fetch live rows
-    live_rows = {
-        row.uuid: row
-        for row in db.query(LiveModel).all()
-    }
-
-    # Fetch overlay rows for session
-    overlays = (
+    return (
         db.query(OverlayModel)
         .filter(OverlayModel.SessionUUID == session_uuid)
-        .order_by(OverlayModel.ChangedAt)
         .all()
     )
 
-    # Apply overlays
-    for overlay in overlays:
-        if overlay.OperationType == OperationType.CREATE:
-            # Virtual row (not yet in DB)
-            live_rows[overlay.TNHAUUID] = overlay.NewValue
 
-        elif overlay.OperationType == OperationType.UPDATE:
-            if overlay.TNAUUID in live_rows:
-                live_rows[overlay.TNAUUID].value = overlay.NewValue
-
-        elif overlay.OperationType == OperationType.DELETE:
-            live_rows.pop(overlay.TNAUUID, None)
-
-    return list(live_rows.values())
-
-
-def read_one_with_overlay(
+# ---------------------------------------------------------
+# READ ONE STAGED ATTRIBUTE
+# ---------------------------------------------------------
+def read_session_overlay_one(
     db: Session,
-    table_name: str,
-    uuid: UUID,
+    table_code: str,
     session_uuid: UUID,
+    attribute_uuid: UUID,
 ):
     """
-    Read one record merged with session overlay.
+    Return a single staged change for an attribute in a session.
     """
+    try:
+        OverlayModel = SESSION_OVERLAY_REGISTRY[table_code]
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Invalid table code")
 
-    LiveModel = LIVE_TABLE_REGISTRY[table_name]
-    OverlayModel = SESSION_OVERLAY_REGISTRY[table_name]
-
-    # Check overlay first (latest change wins)
-    overlay = (
+    obj = (
         db.query(OverlayModel)
         .filter(
             OverlayModel.SessionUUID == session_uuid,
-            OverlayModel.TNAUUID == uuid,
+            OverlayModel.uuid == attribute_uuid,
         )
-        .order_by(OverlayModel.ChangedAt.desc())
         .first()
     )
 
-    if overlay:
-        if overlay.OperationType == OperationType.DELETE:
-            return None
-        if overlay.OperationType in (
-            OperationType.CREATE,
-            OperationType.UPDATE,
-        ):
-            return overlay.NewValue
+    if not obj:
+        raise HTTPException(status_code=404, detail="No staged change found")
 
-    # Fallback to live
-    return (
-        db.query(LiveModel)
-        .filter(LiveModel.uuid == uuid)
-        .first()
-    )
+    return obj

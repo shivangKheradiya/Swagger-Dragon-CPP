@@ -77,8 +77,7 @@ def commit_active_session(
 
     result = commit_session(
         db=db,
-        table_name=table,
+        table_code=table,
         session_uuid=session_uuid,
     )
-
     return result

@@ -16,29 +16,35 @@ from app.models.session_history import SessionHistoryBase
 # ---------------------------------------------------------
 def commit_session(
     db: Session,
-    table_name: str,
+    table_code: str,
     session_uuid: UUID,
 ):
     """
     Commit all staged changes for a session.
 
-    Steps (atomic):
-    1. Apply overlay changes to live table
+    DB RESPONSIBILITIES ONLY:
+    1. Apply session overlay rows to live table
     2. Write history rows
-    3. Mark session inactive
-    4. Delete overlay rows
-    5. Create a new active session
+    3. Clear session overlay
+    4. Mark session inactive
+
+    DOES NOT:
+    - Create a new session
+    - Assume tool / UI behavior
     """
 
+    # -----------------------------------------------------
+    # Resolve models
+    # -----------------------------------------------------
     try:
-        OverlayModel = SESSION_OVERLAY_REGISTRY[table_name]
-        LiveModel = LIVE_TABLE_REGISTRY[table_name]
-        HistoryModel = HISTORY_TABLE_REGISTRY[table_name]
+        OverlayModel = SESSION_OVERLAY_REGISTRY[table_code]
+        LiveModel = LIVE_TABLE_REGISTRY[table_code]
+        HistoryModel = HISTORY_TABLE_REGISTRY[table_code]
     except KeyError:
-        raise HTTPException(status_code=400, detail="Invalid table name")
+        raise HTTPException(status_code=400, detail="Invalid table code")
 
     # -----------------------------------------------------
-    # Validate session existence and status
+    # Validate session
     # -----------------------------------------------------
     session = (
         db.query(SessionHistoryBase)
@@ -56,12 +62,11 @@ def commit_session(
         )
 
     # -----------------------------------------------------
-    # Fetch all overlay rows
+    # Fetch overlay rows for this session
     # -----------------------------------------------------
     overlays = (
         db.query(OverlayModel)
         .filter(OverlayModel.SessionUUID == session_uuid)
-        .order_by(OverlayModel.ChangedAt)
         .all()
     )
 
@@ -75,76 +80,60 @@ def commit_session(
     # Apply changes
     # -----------------------------------------------------
     for overlay in overlays:
+
         if overlay.OperationType == OperationType.CREATE:
-            # CREATE live row
+            # INSERT new live attribute
             live = LiveModel(
-                node_uuid=overlay.NewValue["node_uuid"],
-                attribute_id=overlay.NewValue["attribute_id"],
-                value=overlay.NewValue["value"],
+                uuid=overlay.uuid,
+                node_uuid=overlay.node_uuid,
+                attribute_id=overlay.attribute_id,
+                value=overlay.NewValue,
             )
             db.add(live)
-            db.flush()  # get UUID
-
-            # WRITE history
-            db.add(
-                HistoryModel(
-                    TNAUUID=live.uuid,
-                    OperationType=OperationType.CREATE,
-                    OldValue=None,
-                    NewValue=live.value,
-                )
-            )
 
         elif overlay.OperationType == OperationType.UPDATE:
             live = (
                 db.query(LiveModel)
-                .filter(LiveModel.uuid == overlay.TNAUUID)
+                .filter(LiveModel.uuid == overlay.uuid)
                 .first()
             )
             if not live:
                 raise HTTPException(
                     status_code=409,
-                    detail=f"Live record not found for UPDATE: {overlay.TNAUUID}",
+                    detail=f"Live attribute not found: {overlay.uuid}",
                 )
-
-            old_value = live.value
             live.value = overlay.NewValue
-
-            db.add(
-                HistoryModel(
-                    TNAUUID=live.uuid,
-                    OperationType=OperationType.UPDATE,
-                    OldValue=old_value,
-                    NewValue=live.value,
-                )
-            )
 
         elif overlay.OperationType == OperationType.DELETE:
             live = (
                 db.query(LiveModel)
-                .filter(LiveModel.uuid == overlay.TNAUUID)
+                .filter(LiveModel.uuid == overlay.uuid)
                 .first()
             )
             if not live:
                 raise HTTPException(
                     status_code=409,
-                    detail=f"Live record not found for DELETE: {overlay.TNAUUID}",
+                    detail=f"Live attribute not found: {overlay.uuid}",
                 )
-
-            db.add(
-                HistoryModel(
-                    TNAUUID=live.uuid,
-                    OperationType=OperationType.DELETE,
-                    OldValue=live.value,
-                    NewValue=None,
-                )
-            )
             db.delete(live)
 
-    # -----------------------------------------------------
-    # Close session
-    # -----------------------------------------------------
-    session.IsActive = False
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown OperationType: {overlay.OperationType}",
+            )
+
+        # -------------------------------------------------
+        # Write history (direct copy, no transforms)
+        # -------------------------------------------------
+        history = HistoryModel(
+            uuid=overlay.uuid,
+            OperationType=overlay.OperationType,
+            SessionUUID=session_uuid,
+            OldValue=overlay.OldValue,
+            NewValue=overlay.NewValue,
+        )
+        db.add(history)
 
     # -----------------------------------------------------
     # Clear overlay rows
@@ -156,19 +145,13 @@ def commit_session(
     )
 
     # -----------------------------------------------------
-    # Create new active session
+    # Mark session inactive
     # -----------------------------------------------------
-    new_session = SessionHistoryBase(
-        UserName=session.UserName,
-        HostName=session.HostName,
-        IsActive=True,
-    )
+    session.IsActive = False
 
-    db.add(new_session)
     db.commit()
 
     return {
         "status": "committed",
-        "old_session_uuid": session_uuid,
-        "new_session_uuid": new_session.SessionUUID,
+        "session_uuid": session_uuid,
     }

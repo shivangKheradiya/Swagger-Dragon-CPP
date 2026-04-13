@@ -1,10 +1,5 @@
 import uuid
-from sqlalchemy import (
-    Column,
-    Integer,
-    DateTime,
-    func
-)
+from sqlalchemy import Column, Integer, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.models.base import Base
 
@@ -13,29 +8,52 @@ class SessionJSONBBase(Base):
     """
     Session-scoped working copy / overlay.
 
-    ✅ Represents attribute changes within an active session
-    ✅ Can be used for preview, undo, approval flows
-    ❌ NOT permanent history
+    ✅ Draft state for attribute changes
+    ✅ State-shaped (same shape as live table)
+    ✅ Optimized for fast commit into live + history
+    ✅ NOT permanent history
     """
 
     __abstract__ = True
 
-    # Session overlay record
-    TNHAUUID = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # Attribute UUID:
+    # - CREATE  → newly generated
+    # - UPDATE  → from live table
+    # - DELETE  → from live table
+    uuid = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4
+    )
 
-    # CHANGED: NOT unique (multiple changes allowed)
-    TNAUUID = Column(UUID(as_uuid=True), nullable=False, index=True)
+    # Parent node of the attribute
+    node_uuid = Column(
+        UUID(as_uuid=True),
+        nullable=False,
+        index=True
+    )
 
-    OperationType = Column(Integer, nullable=False)
+    # Attribute definition
+    attribute_id = Column(
+        Integer,
+        nullable=False,
+        index=True
+    )
 
-    # ✅ FIXED: defined ONCE (duplicate removed)
-    SessionUUID = Column(UUID(as_uuid=True), nullable=False, index=True)
-
-    ChangedAt = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
+    # Operation semantics
+    # 1 = CREATE, 2 = UPDATE, 3 = DELETE
+    OperationType = Column(
+        Integer,
         nullable=False
     )
 
+    # Owning session
+    SessionUUID = Column(
+        UUID(as_uuid=True),
+        nullable=False,
+        index=True
+    )
+
+    # Value snapshots (same meaning as history table)
     OldValue = Column(JSONB, nullable=True)
     NewValue = Column(JSONB, nullable=True)
