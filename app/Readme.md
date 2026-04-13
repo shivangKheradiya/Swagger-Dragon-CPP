@@ -1,28 +1,79 @@
 ***
 
-# 📘 API Testing Guide (cURL)
+# 📘 Session‑Based JSONB Editing API
 
-This document provides **complete cURL examples** to test the **Session‑based JSONB editing workflow**.
+This service provides a **session‑oriented, draft–commit workflow** for editing JSONB‑based attribute data.  
+It supports **single‑row and bulk CRUD**, **preview**, **commit**, **abort**, **session discovery**, and **immutable history tracking**.
 
-***
-
-## 🔧 Assumptions
-
-*   FastAPI server running at:
-        http://127.0.0.1:8000
-*   Project code: `XYZ`
-*   Domain table code: `DESI`
-*   UUIDs below are examples — replace as needed
-*   Database and tables are auto‑created
+The design follows patterns used in **CAD / PLM / configuration management systems**, where edits are staged, reviewed, and explicitly persisted.
 
 ***
 
-## 1️⃣ Start a New Session
+## 🧠 Core Concepts
 
-Starts a new editing session.  
-Sessions are **explicit** and tool‑controlled.
+### ✅ Project Code (`{code}`)
 
-### Endpoint
+*   Identifies the project / schema / database
+*   Appears in the URL path
+*   Examples: `XYZ`, `DESI`, `CATA`
+
+***
+
+### ✅ Sessions
+
+*   A **session** represents one unit of work
+*   All edits are staged inside a session
+*   Sessions are **explicitly started**
+*   Sessions can be:
+    *   committed (persist changes)
+    *   aborted (discard changes)
+
+***
+
+### ✅ Overlay
+
+*   Session overlay tables store **proposed state**
+*   Live tables are **never modified directly**
+*   Overlay rows are cleared on commit or abort
+
+***
+
+### ✅ History
+
+*   On commit, immutable history rows are written
+*   History captures:
+    *   attribute UUID
+    *   operation type
+    *   session UUID
+    *   old and new values
+
+***
+
+## 🔁 High‑Level Workflow
+
+    START SESSION
+        ↓
+    STAGE CHANGES (single or bulk)
+        ↓
+    PREVIEW SESSION (optional)
+        ↓
+    COMMIT SESSION   OR   ABORT SESSION
+
+***
+
+## 🔧 Base URL
+
+    http://127.0.0.1:8000
+
+***
+
+# 1️⃣ Session Lifecycle APIs
+
+***
+
+## Start Session
+
+Creates a new active session.
 
     POST /{code}/session/start
 
@@ -33,260 +84,333 @@ curl -X POST \
 "http://127.0.0.1:8000/XYZ/session/start?username=atul&hostname=dev-machine"
 ```
 
-### ✅ Response
+### Response
 
 ```json
 {
   "status": "active",
-  "session_uuid": "01973fd2-bad0-4f13-9dd1-d1907c6ad5a1"
+  "session_uuid": "25f37b21-9df8-4a75-820d-f3e474d717f6"
 }
 ```
 
 ***
 
-## 2️⃣ Stage CREATE (Session Overlay)
+## Get Active Session
 
-Stages a **new attribute** in the session overlay.  
-**No live data is modified** yet.
+Find an existing active session for a user.
 
-### Endpoint
-
-    POST /{code}/{table}
+    GET /{code}/session/active
 
 ### cURL
+
+```bash
+curl \
+"http://127.0.0.1:8000/XYZ/session/active?username=atul&hostname=dev-machine"
+```
+
+### Response (no active session)
+
+```json
+{
+  "active": false,
+  "session_uuid": null
+}
+```
+
+### Response (active session exists)
+
+```json
+{
+  "active": true,
+  "session_uuid": "25f37b21-9df8-4a75-820d-f3e474d717f6",
+  "username": "atul",
+  "hostname": "dev-machine",
+  "started_at": "2026-04-13T10:22:30Z"
+}
+```
+
+***
+
+## List Sessions
+
+List sessions for a user.
+
+    GET /{code}/session
+
+### cURL
+
+```bash
+curl \
+"http://127.0.0.1:8000/XYZ/session?username=atul"
+```
+
+### Response
+
+```json
+{
+  "count": 2,
+  "sessions": [
+    {
+      "session_uuid": "25f37b21-9df8-4a75-820d-f3e474d717f6",
+      "username": "atul",
+      "hostname": "dev-machine",
+      "started_at": "2026-04-13T10:22:30Z",
+      "active": true
+    },
+    {
+      "session_uuid": "aabbccdd-1111-2222-3333-444444444444",
+      "username": "atul",
+      "hostname": "dev-machine",
+      "started_at": "2026-04-10T09:05:00Z",
+      "active": false
+    }
+  ]
+}
+```
+
+***
+
+# 2️⃣ Single‑Row CRUD (Session Overlay)
+
+All CRUD operations below **stage changes inside the session overlay**.
+
+***
+
+## Create (Stage)
+
+    POST /{code}/{table}
 
 ```bash
 curl -X POST \
 "http://127.0.0.1:8000/XYZ/DESI" \
 -H "Content-Type: application/json" \
 -d '{
-  "session_uuid": "01973fd2-bad0-4f13-9dd1-d1907c6ad5a1",
+  "session_uuid": "25f37b21-9df8-4a75-820d-f3e474d717f6",
   "node_uuid": "11111111-2222-3333-4444-555555555555",
   "attribute_id": 1,
-  "value": "Pump-Alpha"
+  "value": "Pump-A"
 }'
 ```
 
-### ✅ Response
+***
+
+## Update (Stage)
+
+    PUT /{code}/{table}/{uuid}
+
+```bash
+curl -X PUT \
+"http://127.0.0.1:8000/XYZ/DESI/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" \
+-H "Content-Type: application/json" \
+-d '{
+  "session_uuid": "25f37b21-9df8-4a75-820d-f3e474d717f6",
+  "value": "Pump-B"
+}'
+```
+
+***
+
+## Delete (Stage)
+
+    DELETE /{code}/{table}/{uuid}?session_uuid=...
+
+```bash
+curl -X DELETE \
+"http://127.0.0.1:8000/XYZ/DESI/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee?session_uuid=25f37b21-9df8-4a75-820d-f3e474d717f6"
+```
+
+***
+
+# 3️⃣ BULK CRUD (Ordered, Fault‑Tolerant)
+
+Bulk operations allow **large change sets** to be staged efficiently.
+
+***
+
+## Guarantees
+
+*   Operations are executed in this strict order:
+        CREATE → UPDATE → DELETE
+*   Each item is committed independently
+*   One failure does NOT stop the batch
+*   Failed items are reported with **exact indices**
+
+***
+
+## Bulk Endpoint
+
+    POST /{code}/{table}/bulk
+
+***
+
+## Bulk Payload Example
 
 ```json
 {
-  "status": "staged",
-  "operation": "CREATE",
-  "uuid": "3a9f8e12-5c41-4c36-a1bb-77f93fc55aaa",
-  "session_uuid": "01973fd2-bad0-4f13-9dd1-d1907c6ad5a1"
+  "session_uuid": "25f37b21-9df8-4a75-820d-f3e474d717f6",
+  "operations": {
+    "create": [
+      {
+        "node_uuid": "11111111-2222-3333-4444-555555555555",
+        "attribute_id": 1,
+        "value": "Pump-A"
+      },
+      {
+        "node_uuid": "22222222-3333-4444-5555-666666666666",
+        "attribute_id": 1,
+        "value": "Pump-A1"
+      }
+    ],
+    "update": [
+      {
+        "uuid": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+        "value": "Pump-B"
+      }
+    ],
+    "delete": [
+      {
+        "uuid": "ffffffff-eeee-dddd-cccc-bbbbbbbbbbbb"
+      }
+    ]
+  }
 }
 ```
 
 ***
 
-## 3️⃣ Read Live Data (No Overlay)
-
-Shows **only committed** (live) data.
-
-### Endpoint
-
-    GET /{code}/{table}
-
-### cURL
-
-```bash
-curl \
-"http://127.0.0.1:8000/XYZ/DESI"
-```
-
-✅ The staged record **will NOT appear** here.
-
-***
-
-## 4️⃣ Preview Session Overlay (All Staged Changes)
-
-Returns **only staged changes** for a session.
-
-### Endpoint
-
-    GET /{code}/{table}/session/{session_uuid}
-
-### cURL
-
-```bash
-curl \
-"http://127.0.0.1:8000/XYZ/DESI/session/01973fd2-bad0-4f13-9dd1-d1907c6ad5a1"
-```
-
-### ✅ Response (example)
-
-```json
-[
-  {
-    "uuid": "3a9f8e12-5c41-4c36-a1bb-77f93fc55aaa",
-    "node_uuid": "11111111-2222-3333-4444-555555555555",
-    "attribute_id": 1,
-    "OperationType": 1,
-    "SessionUUID": "01973fd2-bad0-4f13-9dd1-d1907c6ad5a1",
-    "OldValue": null,
-    "NewValue": "Pump-Alpha"
-  }
-]
-```
-
-***
-
-## 5️⃣ Stage UPDATE (Session Overlay)
-
-Updates an existing attribute **within the same session**.
-
-### Endpoint
-
-    PUT /{code}/{table}/{uuid}
-
-### cURL
-
-```bash
-curl -X PUT \
-"http://127.0.0.1:8000/XYZ/DESI/3a9f8e12-5c41-4c36-a1bb-77f93fc55aaa" \
--H "Content-Type: application/json" \
--d '{
-  "session_uuid": "01973fd2-bad0-4f13-9dd1-d1907c6ad5a1",
-  "node_uuid": "11111111-2222-3333-4444-555555555555",
-  "attribute_id": 1,
-  "value": "Pump-Beta"
-}'
-```
-
-✅ Overlay row is **overwritten**, not duplicated.
-
-***
-
-## 6️⃣ Stage DELETE (Session Overlay)
-
-Stages deletion of an attribute.
-
-### Endpoint
-
-    DELETE /{code}/{table}/{uuid}?session_uuid=...
-
-### cURL
-
-```bash
-curl -X DELETE \
-"http://127.0.0.1:8000/XYZ/DESI/3a9f8e12-5c41-4c36-a1bb-77f93fc55aaa?session_uuid=01973fd2-bad0-4f13-9dd1-d1907c6ad5a1"
-```
-
-✅ If the attribute was **created in the same session**, it is removed from overlay entirely.
-
-***
-
-## 7️⃣ Commit Session (Persist Changes)
-
-Persists all staged changes:
-
-*   Applies overlay → live tables
-*   Writes immutable history
-*   Clears overlay
-*   Marks session inactive
-
-⚠️ **Does NOT create a new session**
-
-### Endpoint
-
-    POST /{code}/session/{session_uuid}/commit?table={table}
-
-### cURL
+## Bulk cURL
 
 ```bash
 curl -X POST \
-"http://127.0.0.1:8000/XYZ/session/01973fd2-bad0-4f13-9dd1-d1907c6ad5a1/commit?table=DESI"
+"http://127.0.0.1:8000/XYZ/DESI/bulk" \
+-H "Content-Type: application/json" \
+-d @bulk.json
 ```
 
-### ✅ Response
+***
+
+## Bulk Response (Partial Success)
+
+```json
+{
+  "status": "partial_success",
+  "summary": {
+    "create": { "total": 2, "success": 1, "failed": 1 },
+    "update": { "total": 1, "success": 1, "failed": 0 },
+    "delete": { "total": 1, "success": 0, "failed": 1 }
+  },
+  "failures": {
+    "create": [
+      { "index": 1, "reason": "Duplicate attribute for node" }
+    ],
+    "delete": [
+      { "index": 0, "reason": "UUID not found" }
+    ]
+  }
+}
+```
+
+✅ Tools can retry **only the failed indices**.
+
+***
+
+# 4️⃣ Preview Session Changes
+
+View all staged changes in a session.
+
+    GET /{code}/{table}/session/{session_uuid}
+
+```bash
+curl \
+"http://127.0.0.1:8000/XYZ/DESI/session/25f37b21-9df8-4a75-820d-f3e474d717f6"
+```
+
+***
+
+# 5️⃣ Commit Session
+
+Persists all staged changes:
+
+*   applies overlay → live tables
+*   writes history
+*   clears overlay
+*   marks session inactive
+
+⚠️ Does NOT create a new session.
+
+    POST /{code}/session/{session_uuid}/commit?table={table}
+
+```bash
+curl -X POST \
+"http://127.0.0.1:8000/XYZ/session/25f37b21-9df8-4a75-820d-f3e474d717f6/commit?table=DESI"
+```
+
+Response:
 
 ```json
 {
   "status": "committed",
-  "session_uuid": "01973fd2-bad0-4f13-9dd1-d1907c6ad5a1"
+  "session_uuid": "25f37b21-9df8-4a75-820d-f3e474d717f6"
 }
 ```
 
 ***
 
-## 8️⃣ Verify Live Data After Commit
+# 6️⃣ Abort Session (Discard Changes)
 
-### Endpoint
+Discards **all staged changes** for a session.
 
-    GET /{code}/{table}
-
-### cURL
-
-```bash
-curl \
-"http://127.0.0.1:8000/XYZ/DESI"
-```
-
-✅ Changes are now visible in live table.
-
-***
-
-## 9️⃣ Verify History Table (Database)
-
-History records are written automatically on commit.
-
-Example SQL (PostgreSQL):
-
-```sql
-SELECT *
-FROM xyz.treehistorydesi
-ORDER BY "HistoryUUID";
-```
-
-Each record includes:
-
-*   `uuid` (live attribute UUID)
-*   `OperationType`
-*   `SessionUUID`
-*   `OldValue`
-*   `NewValue`
-
-***
-
-## 🔟 Start a New Session (Optional)
-
-If the tool/user wants to continue editing:
+    POST /{code}/session/{session_uuid}/abort
 
 ```bash
 curl -X POST \
-"http://127.0.0.1:8000/XYZ/session/start"
+"http://127.0.0.1:8000/XYZ/session/25f37b21-9df8-4a75-820d-f3e474d717f6/abort"
 ```
 
-***
+Response:
 
-## ✅ Summary of Workflow
+```json
+{
+  "status": "aborted",
+  "session_uuid": "25f37b21-9df8-4a75-820d-f3e474d717f6"
+}
+```
 
-    START SESSION
-        ↓
-    STAGE CREATE / UPDATE / DELETE
-        ↓
-    PREVIEW SESSION
-        ↓
-    COMMIT SESSION
-        ↓
-    (OPTIONAL) START NEW SESSION
-
-This architecture matches **professional CAD / PLM / versioned configuration systems**.
+✅ Live data untouched  
+✅ No history written
 
 ***
 
-set PGHOME=E:\Downloads\postgresql-18.3-2-windows-x64-binaries\pgsql
-set PATH=%PGHOME%\bin;%PATH%
-initdb -D %PGHOME%\data
-pg_ctl -D %PGHOME%\data -l %PGHOME%\data\pgsql.log start
-psql -U Shivang -d postgres
+# ✅ Design Guarantees
 
-:: pg_ctl -D %PGHOME%\data stop
-:: pg_ctl register -N PostgreSQL18 -D C:\pgsql\data
-:: net start PostgreSQL18
-:: net stop PostgreSQL18
+| Feature                 | Guarantee |
+| ----------------------- | --------- |
+| Explicit sessions       | ✅         |
+| Live data safety        | ✅         |
+| Ordered bulk execution  | ✅         |
+| Partial success         | ✅         |
+| Precise error reporting | ✅         |
+| Retry‑friendly          | ✅         |
+| Enterprise‑grade        | ✅         |
 
-Changed the password
-:: ALTER ROLE postgres WITH PASSWORD 'postgres';
-:: ALTER ROLE "Shivang" WITH PASSWORD 'Shivang';
+***
+
+## ✅ Conclusion
+
+This API provides a **complete, production‑ready editing workflow** with:
+
+*   session discovery
+*   overlay staging
+*   ordered bulk mutation
+*   fault‑tolerant batching
+*   explicit commit & abort
+*   immutable audit history
+
+It is suitable for:
+
+*   UI editors
+*   CLI tools
+*   automation pipelines
+*   multi‑user environments
+
+***

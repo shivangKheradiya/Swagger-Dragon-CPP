@@ -6,6 +6,9 @@ from app.database import get_db
 from app.schemas.jsonb_value import JSONBCreate
 from app.registry import LIVE_TABLE_REGISTRY
 
+from app.schemas.jsonb_bulk import JSONBBulkRequest, JSONBBulkResponse
+from app.crud.session_bulk_crud import bulk_stage_operations
+
 from app.crud.session_overlay_crud import (
     push_create,
     push_update,
@@ -185,4 +188,37 @@ def read_session_overlay_one_api(
         table_code=table,
         session_uuid=session_uuid,
         attribute_uuid=uuid,
+    )
+
+
+# ---------------------------------------------------------
+# BULK STAGE OPERATIONS (SESSION OVERLAY)
+# ---------------------------------------------------------
+@router.post(
+    "/{table}/bulk",
+    response_model=JSONBBulkResponse,
+    summary="Stage bulk JSONB operations (CREATE → UPDATE → DELETE)",
+)
+def bulk_jsonb_operations(
+    code: str,
+    table: str,
+    payload: JSONBBulkRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Stage a bulk set of operations inside a session.
+
+    - Operations are executed in strict order:
+        CREATE → UPDATE → DELETE
+    - Each item is committed independently
+    - Failures do not stop the batch
+    - Failed indices are returned for tool-level retry
+    """
+
+    validate_table(table)
+
+    return bulk_stage_operations(
+        db=db,
+        table_code=table,
+        payload=payload,
     )
