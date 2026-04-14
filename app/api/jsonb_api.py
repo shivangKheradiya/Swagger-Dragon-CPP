@@ -20,21 +20,12 @@ from app.crud.session_read_crud import (
     read_session_overlay_one,
 )
 
-from app.schemas.search import SearchRequest
-from app.crud.search_crud import execute_search
+from app.api.helper import validate_table
 
 router = APIRouter(
     prefix="/{code}",
-    tags=["JSONB Dynamic Tables"],
+    tags=["JSON Dynamic Tables Management"],
 )
-
-
-# ---------------------------------------------------------
-# Helper: validate domain/table code
-# ---------------------------------------------------------
-def validate_table(table: str):
-    if table not in LIVE_TABLE_REGISTRY:
-        raise HTTPException(status_code=400, detail=f"Invalid table code: {table}")
 
 
 # ---------------------------------------------------------
@@ -57,48 +48,6 @@ def create_jsonb_record(
         table_code=table,
         payload=payload,
     )
-
-
-# ---------------------------------------------------------
-# READ ALL (LIVE TABLE ONLY)
-# ---------------------------------------------------------
-@router.get(
-    "/{table}",
-    summary="Read all JSONB records (live)",
-)
-def read_all_jsonb_records(
-    code: str,
-    table: str,
-    db: Session = Depends(get_db),
-):
-    validate_table(table)
-
-    LiveModel = LIVE_TABLE_REGISTRY[table]
-    return db.query(LiveModel).all()
-
-
-# ---------------------------------------------------------
-# READ ONE (LIVE TABLE ONLY)
-# ---------------------------------------------------------
-@router.get(
-    "/{table}/{uuid}",
-    summary="Read one JSONB record by UUID (live)",
-)
-def read_jsonb_record(
-    code: str,
-    table: str,
-    uuid: UUID,
-    db: Session = Depends(get_db),
-):
-    validate_table(table)
-
-    LiveModel = LIVE_TABLE_REGISTRY[table]
-    obj = db.query(LiveModel).filter(LiveModel.uuid == uuid).first()
-
-    if not obj:
-        raise HTTPException(status_code=404, detail="Record not found")
-
-    return obj
 
 
 # ---------------------------------------------------------
@@ -225,15 +174,3 @@ def bulk_jsonb_operations(
         table_code=table,
         payload=payload,
     )
-
-@router.post(
-    "/search",
-    summary="Generic cascading search (AND / OR)",
-)
-def search_jsonb(
-    code: str,
-    payload: SearchRequest,
-    db: Session = Depends(get_db),
-):
-    validate_table(payload.table)
-    return execute_search(db, payload)

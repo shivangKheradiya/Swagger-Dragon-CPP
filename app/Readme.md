@@ -15,7 +15,7 @@ The design follows patterns used in **CAD / PLM / configuration management syste
 
 *   Identifies the project / schema / database
 *   Appears in the URL path
-*   Examples: `XYZ`, `DESI`, `CATA`
+*   Examples: `XYZ`, `ABC`, `PQR`
 
 ***
 
