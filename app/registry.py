@@ -70,3 +70,16 @@ SESSION_OVERLAY_REGISTRY = {
     "SCHE": SessionTreeSCHE,
     "SKET": SessionTreeSKET,
 }
+
+# ---------------------------------------------------------
+# SEARCHABLE COLUMN REGISTRY (READ‑ONLY SAFETY LAYER)
+# ---------------------------------------------------------
+
+SEARCHABLE_COLUMN_REGISTRY = {
+    "DESI": {"uuid", "node_uuid", "attribute_id", "value"},
+    "CATA": {"uuid", "node_uuid", "attribute_id", "value"},
+    "DICT": {"uuid", "node_uuid", "attribute_id", "value"},
+    "ENGG": {"uuid", "node_uuid", "attribute_id", "value"},
+    "SCHE": {"uuid", "node_uuid", "attribute_id", "value"},
+    "SKET": {"uuid", "node_uuid", "attribute_id", "value"},
+}

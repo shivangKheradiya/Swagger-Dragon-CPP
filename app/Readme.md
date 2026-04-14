@@ -3,9 +3,9 @@
 # 📘 Session‑Based JSONB Editing API
 
 This service provides a **session‑oriented, draft–commit workflow** for editing JSONB‑based attribute data.  
-It supports **single‑row and bulk CRUD**, **preview**, **commit**, **abort**, **session discovery**, and **immutable history tracking**.
+It supports **single‑row and bulk CRUD**, **preview**, **commit**, **abort**, **session discovery**, **immutable history tracking**, and **generic search**.
 
-The design follows patterns used in **CAD / PLM / configuration management systems**, where edits are staged, reviewed, and explicitly persisted.
+The design follows patterns used in **CAD / PLM / configuration management systems**, where edits are staged, reviewed, explicitly persisted, and queried deterministically.
 
 ***
 
@@ -381,6 +381,76 @@ Response:
 
 ***
 
+# 7️⃣ Generic Search (Read‑Only)
+
+A **generic, table‑aware search API** is provided to query JSONB attribute data using  
+**cascaded AND / OR conditions** and **match types**, without modifying any data.
+
+Search queries are:
+
+*   **Read‑only**
+*   **Registry‑controlled**
+*   **Session‑aware**
+*   **Safe from arbitrary table or column access**
+
+***
+
+## Search Scope
+
+Search can be executed against:
+
+*   `live`   → committed data only
+*   `overlay` → staged session data only
+*   `merged` → session overlay overriding live data
+
+***
+
+## Search Endpoint
+
+    POST /{code}/search
+
+***
+
+## Search Payload Example
+
+```json
+{
+  "table": "DESI",
+  "scope": "merged",
+  "session_uuid": "25f37b21-9df8-4a75-820d-f3e474d717f6",
+  "where": [
+    {
+      "logic": "AND",
+      "conditions": [
+        { "field": "node_uuid", "operator": "eq", "value": "N100" },
+        { "field": "attribute_id", "operator": "in", "value": [1, 2, 3] }
+      ]
+    },
+    {
+      "logic": "OR",
+      "conditions": [
+        { "field": "value", "operator": "ilike", "value": "%pump%" },
+        { "field": "value", "operator": "ilike", "value": "%valve%" }
+      ]
+    }
+  ],
+  "limit": 50,
+  "offset": 0
+}
+```
+
+***
+
+## Search Guarantees
+
+*   Table selection is validated via registry
+*   Only explicitly allowed columns are searchable
+*   Conditions are safely parameterized
+*   Session overlays correctly override live data (merged scope)
+*   No writes, no side effects, no history impact
+
+***
+
 # ✅ Design Guarantees
 
 | Feature                 | Guarantee |
@@ -391,18 +461,19 @@ Response:
 | Partial success         | ✅         |
 | Precise error reporting | ✅         |
 | Retry‑friendly          | ✅         |
+| Safe generic search     | ✅         |
 | Enterprise‑grade        | ✅         |
 
 ***
 
 ## ✅ Conclusion
 
-This API provides a **complete, production‑ready editing workflow** with:
+This API provides a **complete, production‑ready editing and querying workflow** with:
 
 *   session discovery
 *   overlay staging
 *   ordered bulk mutation
-*   fault‑tolerant batching
+*   deterministic search
 *   explicit commit & abort
 *   immutable audit history
 

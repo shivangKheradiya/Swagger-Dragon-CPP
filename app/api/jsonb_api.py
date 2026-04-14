@@ -20,6 +20,9 @@ from app.crud.session_read_crud import (
     read_session_overlay_one,
 )
 
+from app.schemas.search import SearchRequest
+from app.crud.search_crud import execute_search
+
 router = APIRouter(
     prefix="/{code}",
     tags=["JSONB Dynamic Tables"],
@@ -222,3 +225,15 @@ def bulk_jsonb_operations(
         table_code=table,
         payload=payload,
     )
+
+@router.post(
+    "/search",
+    summary="Generic cascading search (AND / OR)",
+)
+def search_jsonb(
+    code: str,
+    payload: SearchRequest,
+    db: Session = Depends(get_db),
+):
+    validate_table(payload.table)
+    return execute_search(db, payload)
